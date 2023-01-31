@@ -1,0 +1,470 @@
+---
+title: "Identyfing all Important predictor for Heart Disease"
+output:
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+| Aim :                                                                              |
+|:-------|
+| To classify which all attributes are the most important predictor of heart disease |
+
+## Dataset Attributes
+
+Age : age of the patient [years] Sex : sex of the patient [M: Male, F:
+Female] ChestPainType : chest pain type [TA: Typical Angina, ATA:
+Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic] RestingBP :
+resting blood pressure [mm Hg] Cholesterol : serum cholesterol [mm/dl]
+FastingBS : fasting blood sugar [1: if FastingBS \> 120 mg/dl, 0:
+otherwise] RestingECG : resting electrocardiogram results [Normal:
+Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST
+elevation or depression of \> 0.05 mV), LVH: showing probable or
+definite left ventricular hypertrophy by Estes' criteria] MaxHR :
+maximum heart rate achieved [Numeric value between 60 and 202]
+ExerciseAngina : exercise-induced angina [Y: Yes, N: No] Oldpeak :
+oldpeak = ST [Numeric value measured in depression] ST_Slope : the slope
+of the peak exercise ST segment [Up: upsloping, Flat: flat, Down:
+downsloping] HeartDisease : output class [1: heart disease, 0: Normal]
+
+Importing all the necessary libraries:
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(nycflights13)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(readr)
+```
+
+Data Info:
+
+```{r}
+heart <- read_csv("C:/Users/ROSHAN D K/Desktop/R project/heart.csv", show_col_types = FALSE)
+heart
+```
+
+Checking the dimension of the dataset
+
+```{r}
+dim(heart)
+```
+
+Finding the data type of each **column**
+
+```{r}
+str(heart)
+```
+
+Checking Missing values in each column
+
+```{r}
+heart %>%
+  summarise_all(~ sum(is.na(.)))
+```
+
+Well,There is no null values found in the dataset
+
+Now, We are going to divide the data into two features Categorical
+Features : Sex ChestPainType FastingBS RestingECG ExerciseAngina
+ST_Slope, HeartDisease
+
+```{r}
+# Create a data frame with only numerical columns
+heart_num <- select_if(heart, is.numeric)
+
+# Create a data frame with only categorical columns
+heart_cat <- heart[, sapply(heart, function(x) !is.numeric(x))]
+
+```
+
+Numerical Features : Age, RestingBP, Cholesterol, MaxHR, Oldpeak. If an
+attribute contains fewer than six distinct elements, it is characterised
+as a categorical feature; otherwise, it is a numerical feature.
+
+# Exploratory Data Analysis
+
+Exploring Overall Distribution of data
+
+```{r}
+# Create a bar plot to visualize the percentages
+library(scales)
+heart_disease_percent <- prop.table(table(heart$HeartDisease))
+bp <- ggplot(heart, aes(x="", y=HeartDisease, fill=heart$Sex)) +
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  geom_text(aes(y = HeartDisease/3 + c(0, cumsum(HeartDisease)[-length(HeartDisease)]), label = HeartDisease), size=5)
+  
+# Create a frequency table for the output class
+table(heart$HeartDisease)
+# Create a frequency table for the 'Sex' variable
+table(heart$Sex, heart$HeartDisease)
+
+```
+
+This dataset contains more number of Males observation than the female,
+so we need to keep this in mind. observations of male with heart disease
+is 8 times more than a female. people with heart disease and people with
+no heart disease is preety much evenly distributed.
+
+# Categorical Feature Analysis
+
+Target variable visualisation All the observations contains after the
+FastingBS output.
+
+```{r}
+ggplot(heart, aes(x=Sex, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("Sex vs Heart Disease")
+
+ggplot(heart, aes(x=ChestPainType, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("ChestPainType vs Heart Disease")
+
+ggplot(heart, aes(x=RestingECG, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("RestingECG vs Heart Disease")
+
+ggplot(heart, aes(x=ExerciseAngina, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("ExerciseAngina vs Heart Disease")
+
+ggplot(heart, aes(x=ST_Slope, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("ST_Slope vs Heart Disease")
+
+ggplot(heart, aes(x=FastingBS, fill=factor(HeartDisease))) +
+  geom_bar(position = "dodge") +
+  ggtitle("FastingBS vs Heart Disease")
+
+```
+
+Observations: 1. Men are nearly two times as likely as women to suffer
+heart disease.
+
+2.  There are about 500 cases of asymptomatic chest discomfort, which
+    means that half of our participants had no prior symptoms before
+    having a heart attack.
+
+3.  Resting electrocardiogram: Person with ST-T wave abnormalities is
+    more likely to have a cardiac condition than the others.
+
+4.  ExerciseAngina: Compared to exercise-induced angina with a "No,"
+    exercise-induced angina with a "Yes" is about 2.4 times more likely
+    to be associated with a cardiac condition.
+
+5.  ST Slope: The peak workout ST segment's slope varies. Compared to
+    the other two segments, ST Slope Up considerably less likely to have
+    heart disease.
+
+6.  FastingBS: Patients with and without fasting blood sugar diagnoses
+    are much more likely to develop heart disease.
+
+# Numerical Features Analysis:
+
+All the ranges are given after all the visualizations Detecting Outliers
+
+```{r}
+# Box plot for the 'Age' variable
+ggplot(heart, aes(x=factor(HeartDisease), y=Age)) +
+  geom_boxplot() +
+  ggtitle("Age vs Heart Disease")
+
+# Box plot for the 'Age' variable
+ggplot(heart, aes(x=factor(HeartDisease), y=RestingBP)) +
+  geom_boxplot() +
+  ggtitle("RestingBP vs Heart Disease")
+
+# Box plot for the 'Age' variable
+ggplot(heart, aes(x=factor(HeartDisease), y=Cholesterol)) +
+  geom_boxplot() +
+  ggtitle("Cholesterol vs Heart Disease")
+
+# Box plot for the 'Age' variable
+ggplot(heart, aes(x=factor(HeartDisease), y=MaxHR)) +
+  geom_boxplot() +
+  ggtitle("MaxHR vs Heart Disease")
+
+# Box plot for the 'Age' variable
+ggplot(heart, aes(x=factor(HeartDisease), y=Oldpeak)) +
+  geom_boxplot() +
+  ggtitle("Oldpeak vs Heart Disease")
+```
+
+Observations: The range at which patient have high chance of positive
+cases of heart disease Age : 50+ RestingBP : 95 - 170 Cholesterol : 0 -
+600 MaxHR : 70 - 180 Oldpeak : 0 - 4
+
+Checking Impact of numerical feature on output
+
+```{r}
+
+ggplot(data = heart, aes(x= Age)) +
+  stat_count(color = "darkblue", fill = "lightblue") +
+  labs(title = "Age Distribution", x = "Age", y = "Count") +
+  scale_x_log10()
+
+ggplot(data = heart, aes(x= RestingBP)) +
+  stat_count(color = "darkblue", fill = "lightblue") +
+  labs(title = "RestingBP Histogram Plot", x = "Age", y = "Count")  +
+  scale_x_log10()
+
+ggplot(data = heart, aes(x= Cholesterol)) +
+  stat_count(color = "darkblue", fill = "lightblue") +
+  labs(title = "Cholesterol Histogram Plot", x = "Age", y = "Count")   +
+  scale_x_log10()
+
+ggplot(data = heart, aes(x= MaxHR)) +
+  stat_count(color = "darkblue", fill = "lightblue") +
+  labs(title = "MaxHR Histogram Plot", x = "Age", y = "Count")  +
+  scale_x_log10()
+
+ggplot(data = heart, aes(x= Oldpeak)) +
+  stat_count(color = "darkblue", fill = "lightblue") +
+  labs(title = "Oldpeak Histogram Plot", x = "Age", y = "Sex") 
+```
+
+The maximum density is found in people aged 50 to 65, with a mean age of
+53.5. Oldpeak's data distribution is rightly skewed appropriately. The
+data distribution for cholestrol is bidmodal.
+
+# Bi-variate Analysis
+
+```{r}
+ggplot(heart, aes(x=Age, y=HeartDisease, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title="Age vs Heart disease")
+
+```
+
+It shows a clear trend that, as patients get older, they have more cases
+of heart diseases.
+
+```{r}
+ggplot(heart, aes(x=MaxHR, y=HeartDisease, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title="Maximum Heart Rate Vs Heart Disease")
+
+```
+
+As expected, those with cardiac disease had lower maximum heart rates.
+This might be due to the diseases themselves, which could lead to heart
+degeneration.
+
+```{r}
+ggplot(heart, aes(x=Age, y=MaxHR, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "Age vs Maximum Heart Rate")
+
+```
+
+This is not directly associated with the heart disease but still good to
+know: People's maximum heart rates normally decline with age since their
+hearts aren't as strong as they were in their youth.
+
+```{r}
+ggplot(heart, aes(x=Age, y=RestingBP, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "Age vs Resting blood sugar level")
+```
+
+As patients get older their blood sugar level also increases
+
+```{r}
+ggplot(heart, aes(x=Cholesterol, y=HeartDisease, 
+                                    color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title="Cholesterol Levels Vs Heart Diseases")
+
+```
+
+Patients with heart disease had normal cholesterol levels. This is
+uncommon because heart failure is often brought on by high cholesterol
+levels.
+
+```{r}
+ggplot(heart, aes(x=FastingBS, y=HeartDisease, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "Sugar Blood Level Vs Heart Diseases")
+```
+
+As expected, Patients with heart diseases usually have a higher levels
+of blood sugar sugar levels.
+
+```{r}
+ggplot(heart, aes(x=Oldpeak, y=HeartDisease, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "Oldpeak vs HeartDisease")
+```
+
+Trend is very clear that, patients with heart disease have higher
+oldpeak (Its a Numeric value measured in depression)
+
+```{r}
+ggplot(heart, aes(x=RestingBP, y=HeartDisease, color=Sex)) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  labs(title = "RestingBP vs HeartDisease")
+```
+
+Patients with higher blood pressure level has higher cases of having
+heart disease.
+
+Multivariate Analysis
+
+```{r}
+# Scatter plot for the 'RestingBP' and 'Cholesterol' variables
+ggplot(heart, aes(x=FastingBS, y=Cholesterol, color=factor(HeartDisease))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Fasting blood sugar level vs Cholesterol vs Heart Disease")
+
+ggplot(heart, aes(x=Cholesterol, y=Oldpeak, color=factor(HeartDisease))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Cholesterol vs Resting Blood Pressure vs Heart Disease")
+
+ggplot(heart, aes(x=RestingBP, y=MaxHR, color=factor(HeartDisease))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Resting Blood Pressure vs Maximum Heart Rate vs Heart Disease")
+
+ggplot(heart, aes(x=Age, y=RestingBP, color=factor(HeartDisease))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Age vs Resting Blood Pressure vs Heart Disease")
+
+ggplot(heart, aes(x=Age, y=Cholesterol, color=factor(HeartDisease))) +
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Age vs Cholesterol level vs Heart Disease")
+
+
+```
+
+1.  Patients are more likely to develop heart disease if their maximum
+    heart rate is higher and their resting blood pressure is lower.
+2.  As we already know, as people age, their blood sugar levels rise as
+    well, which also tends to raise their risk of developing heart
+    disease.
+
+```{r}
+# # Fit a decision tree model using all of the variables   
+library(rpart)
+library(rpart.plot)
+model <- rpart(HeartDisease ~ ., data = heart)
+rpart.plot(model)
+```
+
+Statistical testing
+
+The chi-square test to determine if there is a significant association
+between all the numerical feature and HeartDisease
+
+```{r}
+# Chi-square test
+library(vcd)
+chisq.test(table(heart$Cholesterol, heart$HeartDisease))
+chisq.test(table(heart$MaxHR, heart$HeartDisease))
+chisq.test(table(heart$FastingBS, heart$HeartDisease))
+chisq.test(table(heart$Age, heart$HeartDisease))
+```
+
+Observations: As p-value less than 0.05 would indicate a significant
+association between the heart disease and all thease features like
+Cholestrol level, Maximum heart rate, Age and finally blood sugar level.
+
+For some reason I am not able to knit it using this Chunck so I am
+commenting it out, when you remove the comment model is working fine.
+
+```{r}
+# Split the data into training and test sets
+#set.seed(123)
+# split_index <- createDataPartition(heart$HeartDisease, p = 0.7, list = FALSE)
+#train_data <- heart[split_index, ]
+#test_data <- heart[-split_index, ]
+
+# Fit a logistic regression model
+#model <- glm(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + Cholesterol + FastingBS + RestingECG + MaxHR + ExerciseAngina + Oldpeak + ST_Slope, data = train_data, family = binomial())
+
+# Summary of the model
+#summary(model)
+```
+
+Observations: Age, RestingBP, FastingBS, ExerciseAngina (Yes),Oldpeak
+and ST_SlopeFlat feature positively correlate with the heart disease,
+whereas other feature negatively correlate with the heart disease.
+
+```{r}
+```
+
+Conclusion:
+
+Out of all heart disease patients, a startling 90% of them are men,
+according to the data. 77% of ASY types result in cardiac problems,
+which is the majority. Exercise-induced angina with a 'Yes' is about 2.4
+times more likely to suffer a heart disease. A fasting blood sugar level
+below 120 mg/dl indicates a greater risk of developing heart disease.
+From the perspective of numerical characteristics, patients in this
+range are more likely to suffer heart illness. Age: 50+, Resting Blood
+Pressure: 95-170, Cholesterol: 0--600, Maximum Heart Rate: 70--180,
+Oldpeak: 0--4. Age, Maximum Heart Rate, Cholesterol, and Fasting Blood
+Sugar Level are the most significant predictors of heart disease,
+according to our analysis of various features
+
+The goal of researching the association between these characteristics
+and heart disease is to get a better knowledge of the potential risk
+poses by this feature on heart disease and to build reliable models for
+predicting heart disease.There were a few difficulties with this
+analysis, including: 1. Getting a big, diverse dataset for analysis that
+appropriately represents the community of interest is one of the biggest
+obstacles. 2. The quality of the data gathered is a significant
+difficulty; in our instance, the study of the cholestrol variable,
+inaccurate data might have a substantial impact on the findings. 3.
+Another issue in this research is selecting the most relevant factors,
+as the number of variables might be fairly vast, and not all variables
+may be useful for the categorization of heart disease. 4. I've simply
+used the logistics regression model in my example, but choosing the best
+model for this study is difficult because it can have a big impact on
+the outcomes. 5. Finally, applying domain knowledge from the medical
+field to the outcomes.
+
+Few Mistake that were made during the analysis, was not properly dealing
+with the outlier before deploying the model like applying dimensionality
+reduction theorem on the outliers or any other technique. If I had more
+time to complete the research, I would have conducted a more thorough
+analysis of each variable's distribution, as well as a deeper
+investigation into the association between each variable and heart
+disease using a random forest model and other sophisticated statistical
+techniques.
+
+Another research subject I'd want to look at is: To determine the
+relationship between different variables and the likelihood of heart
+disease. Using a machine learning technique, to discover the most
+important predictors of heart disease. To investigate the effect of
+demographic parameters on the risk of heart disease, such as age and
+gender. Using predictive modelling tools, uncover possible early warning
+indicators for heart disease.
+
+The same research question(s) could have been addressed differently if
+data contain 1. The smoking habbits of the patients. 2. Also, contains
+the variables like patients were on any medication or had any other
+disease 3. Data would give more insight if it contains the occupation
+and more demographic data. 4. data on Eating habbits could also be
+usefull. 5. Data about if they drink alchol or not.
+
+References
+<https://www.kaggle.com/code/durgancegaur/a-guide-to-any-classification-problem>
+<https://www.kaggle.com/code/tanmay111999/heart-failure-prediction-cv-score-90-5-models>
+<https://www.kaggle.com/code/azizozmen/heart-failure-predict-8-classification-techniques>
+<https://www.kaggle.com/code/pythonafroz/evaluation-metrics-used-in-machine-learning>
